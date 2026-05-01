@@ -1,86 +1,75 @@
-# ResumeIQ — AI Resume Analyser (Python Edition)
+# ResumeIQ — AI-Powered Resume Analyser
 
-An AI-powered resume analyser built with **Python + Flask**, using Google Gemini AI
-to score your resume, identify skill gaps, and give actionable improvement tips.
+> Upload your resume, get an honest score, and know exactly what to fix.
+
+🔗 **Live Demo:** [resumeiq-xw7j.onrender.com](https://resumeiq-xw7j.onrender.com)
+
+---
+
+## What is ResumeIQ?
+
+ResumeIQ is a simple AI-powered tool that takes your resume and tells you how strong it actually is. Paste your text or drop in a PDF, optionally add a job description, and within seconds you'll have a score, a skill gap breakdown, and actionable suggestions to improve your chances.
+
+No sign-up. No fluff. Just honest feedback.
+
+---
+
+## How It Works
+
+1. **Upload your resume** — paste plain text or upload a PDF/TXT file (max 10 MB)
+2. **Add a job description** — enables targeted skill matching for the specific role you're after
+3. **Get your results** — score breakdown, top skills identified, gap analysis, and improvement tips
+
+---
+
+## Features
+
+- **Resume scoring** — clear breakdown of how your resume performs
+- **Skill extraction** — automatically identifies the key skills in your resume
+- **Skill gap analysis** — highlights what's missing relative to your target role
+- **Improvement suggestions** — actionable, specific tips (not generic advice)
+- **Job description matching** — compare your resume against a real job posting
+- **File support** — PDF and TXT upload, plus plain text paste
 
 ---
 
 ## Tech Stack
 
-| Layer    | Technology                          |
-|----------|-------------------------------------|
-| Backend  | Python 3.10+ · Flask                |
-| Frontend | Vanilla HTML / CSS / JavaScript     |
-| AI       | Google Gemini 1.5 Flash (free tier) |
-| PDF      | pdfplumber                          |
+- **Frontend** — HTML / CSS / JavaScript
+- **Backend** — Python
+- **AI** — Powered by a large language model for analysis and suggestions
+- **Deployment** — Hosted on [Render](https://render.com)
 
 ---
 
-## Project Structure
-
-```
-resume_analyser/
-├── app.py              ← Flask server (all backend logic lives here)
-├── requirements.txt    ← Python dependencies
-├── .env.example        ← Template for your API key
-├── .env                ← Your actual secrets (never commit this!)
-└── templates/
-    └── index.html      ← Full frontend (HTML + CSS + JS in one file)
-```
-
----
-
-## Quick Start
-
-### Step 1 — Get a FREE Gemini API Key
-
-1. Go to https://aistudio.google.com/apikey
-2. Sign in with Google
-3. Click **Create API Key** — copy it (looks like `AIzaSy...`)
-
-### Step 2 — Install dependencies
+## Getting Started Locally
 
 ```bash
-pip install -r requirements.txt
+# Clone the repo
+git clone https://github.com/Amannazare/ResumeIQ.git
+cd ResumeIQ
+
+# Install dependencies
+npm install   # or pip install -r requirements.txt
+
+# Start the dev server
+npm start     # or python app.py
 ```
 
-### Step 3 — Set up your API key
-
-```bash
-cp .env.example .env
-```
-
-Open `.env` and replace the placeholder:
-
-```
-GEMINI_API_KEY=AIzaSyYourActualKeyHere
-PORT=5000
-```
-
-### Step 4 — Run the server
-
-```bash
-python app.py
-```
-
-Then open your browser at **http://localhost:5000** ✅
+> Make sure to add your API keys in a `.env` file if required.
 
 ---
 
-## How it works (for your presentation)
+## Deployment
 
-1. User pastes or uploads their resume → browser sends it to `/api/parse-file`
-2. Flask uses **pdfplumber** to extract text from the PDF
-3. User clicks "Analyse" → browser sends text to `/api/analyze`
-4. Flask builds a structured prompt and sends it to **Gemini 1.5 Flash**
-5. Gemini returns a JSON object with scores, skills, suggestions
-6. The frontend renders everything — score ring, bar charts, skill tags
+This project is deployed on **Render**.
+
+To deploy your own instance:
+1. Fork this repo
+2. Connect it to your Render account
+3. Set up environment variables in the Render dashboard
+4. Deploy — Render handles the rest
 
 ---
 
-## Environment Variables
-
-| Variable        | Required | Description                  |
-|-----------------|----------|------------------------------|
-| `GEMINI_API_KEY`| ✅ Yes   | From aistudio.google.com     |
-| `PORT`          | Optional | Defaults to 5000             |
+Built by [Aman Nazare](https://github.com/Amannazare)
