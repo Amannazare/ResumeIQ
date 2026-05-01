@@ -25,22 +25,17 @@ from google import genai
 import pdfplumber
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Setup
-# ─────────────────────────────────────────────────────────────────────────────
 
-# Load environment variables from our .env file (where we store the API key).
-# This keeps secrets out of the source code — a basic security best practice.
+# Setup
+
+
 load_dotenv(override=True)
 
-# Create the Flask app. __name__ tells Flask where to look for templates/static files.
 app = Flask(__name__)
 
-# Cap uploaded files at 10 MB to prevent abuse or accidental giant uploads.
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10 MB in bytes
 
 # Read the Gemini API key from environment. If it's missing, we warn the user
-# immediately rather than failing silently later at analysis time.
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
     print("WARNING: GEMINI_API_KEY not found in .env — analysis will fail.")
@@ -49,9 +44,8 @@ if not GEMINI_API_KEY:
 #genai.configure(api_key=GEMINI_API_KEY)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # Helper: Extract text from uploaded file
-# ─────────────────────────────────────────────────────────────────────────────
 
 def extract_text_from_file(file_bytes: bytes, filename: str) -> str:
     """
@@ -99,9 +93,8 @@ def extract_text_from_file(file_bytes: bytes, filename: str) -> str:
         raise ValueError("Unsupported file type. Please upload a PDF or TXT file.")
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # Helper: Build the Gemini prompt
-# ─────────────────────────────────────────────────────────────────────────────
 
 def build_analysis_prompt(resume_text: str, job_description: str) -> str:
     """
@@ -124,7 +117,6 @@ def build_analysis_prompt(resume_text: str, job_description: str) -> str:
     """
 
     # Trim inputs to stay within Gemini's context window limits.
-    # The free tier has generous limits, but we cap anyway to keep costs low.
     trimmed_resume = resume_text[:5000]
     trimmed_jd = job_description[:2000] if job_description else ""
 
@@ -187,9 +179,8 @@ The JSON must follow this exact structure:
     return prompt
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # Route 1 — Serve the main page
-# ─────────────────────────────────────────────────────────────────────────────
 
 @app.route("/")
 def index():
@@ -202,9 +193,7 @@ def index():
     return render_template("index.html")
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # Route 2 — Parse uploaded PDF or TXT file
-# ─────────────────────────────────────────────────────────────────────────────
 
 @app.route("/api/parse-file", methods=["POST"])
 def parse_file():
@@ -217,7 +206,6 @@ def parse_file():
     back the first 8,000 characters. That's enough for any normal resume.
     """
 
-    # Check that a file was actually included in the request.
     if "resume" not in request.files:
         return jsonify({"error": "No file was uploaded. Please attach a file."}), 400
 
@@ -228,10 +216,8 @@ def parse_file():
         return jsonify({"error": "The uploaded file has no name."}), 400
 
     try:
-        # Read the entire file into memory as bytes.
         file_bytes = uploaded_file.read()
 
-        # Use our helper to pull out plain text.
         raw_text = extract_text_from_file(file_bytes, uploaded_file.filename)
 
         # Cap at 8,000 characters — more than enough for even a 3-page resume.
@@ -247,9 +233,7 @@ def parse_file():
         return jsonify({"error": "Failed to extract text from the file. Please try pasting your resume instead."}), 500
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # Route 3 — Analyse resume using Gemini AI
-# ─────────────────────────────────────────────────────────────────────────────
 
 @app.route("/api/analyze", methods=["POST"])
 def analyze_resume():
@@ -326,9 +310,7 @@ def analyze_resume():
         return jsonify({"error": str(e) or "Analysis failed. Please try again."}), 500
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # Entry point
-# ─────────────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     # Read port from environment (useful for deployment), default to 5000.
