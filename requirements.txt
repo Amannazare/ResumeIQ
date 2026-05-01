@@ -1,0 +1,7 @@
+# Python dependencies for Resume Analyser
+# Install all at once with: pip install -r requirements.txt
+
+flask>=3.0.0            # Web framework — handles routing, requests, responses
+python-dotenv>=1.0.0    # Loads .env file into os.environ (keeps secrets safe)
+google-genai
+pdfplumber>=0.11.0      # Reliable PDF text extraction (better than PyPDF2 for layout)

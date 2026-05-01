@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ResumeIQ — AI Resume Analyser</title>
+
+  <!--
+    Unlike the original project which used React + Vite (requiring Node.js
+    and a build step), we're writing plain HTML, CSS, and vanilla JavaScript.
+    This means the file works directly — no npm install, no compilation.
+    Flask serves this template as-is, inserting it into the browser.
+  -->
+
+  <style>
+    /* ── Reset & base ──────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      min-height: 100vh;
+    }
+
+    /* ── Layout shell ──────────────────────────────────────────────── */
+    .app-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 18px 32px;
+      border-bottom: 1px solid #21262d;
+      background: #161b22;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .logo-icon { font-size: 22px; }
+    .logo-text { font-size: 20px; font-weight: 700; color: #fff; }
+    .logo-tag { font-size: 13px; color: #8b949e; }
+
+    .app-main {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 40px 20px 80px;
+    }
+
+    /* ── Cards ─────────────────────────────────────────────────────── */
+    .card {
+      background: #161b22;
+      border: 1px solid #21262d;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .card-title { font-size: 15px; font-weight: 600; color: #e6edf3; }
+    .optional-badge {
+      font-size: 11px;
+      background: #21262d;
+      color: #8b949e;
+      border-radius: 4px;
+      padding: 2px 7px;
+      margin-left: 8px;
+    }
+
+    /* ── Upload screen ──────────────────────────────────────────────── */
+    .hero { text-align: center; margin-bottom: 36px; }
+    .hero h1 { font-size: 32px; font-weight: 800; margin-bottom: 10px; }
+    .hero p { color: #8b949e; font-size: 15px; }
+
+    .steps-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 28px;
+      justify-content: center;
+    }
+    .step-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #21262d;
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 13px;
+      color: #c9d1d9;
+    }
+    .step-num {
+      background: #58a6ff;
+      color: #0d1117;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    /* Mode toggle (paste / upload) */
+    .mode-toggle { display: flex; border: 1px solid #30363d; border-radius: 8px; overflow: hidden; }
+    .mode-toggle button {
+      background: none;
+      border: none;
+      color: #8b949e;
+      padding: 6px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .mode-toggle button.active { background: #21262d; color: #e6edf3; }
+
+    /* Textarea */
+    textarea {
+      width: 100%;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      color: #e6edf3;
+      font-size: 14px;
+      padding: 12px;
+      resize: vertical;
+      outline: none;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+    textarea:focus { border-color: #58a6ff; }
+    #resume-text { min-height: 220px; }
+    #job-desc { min-height: 110px; }
+
+    /* Drop zone */
+    .drop-zone {
+      border: 2px dashed #30363d;
+      border-radius: 10px;
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .drop-zone:hover, .drop-zone.drag-over { border-color: #58a6ff; background: #161f2e; }
+    .drop-zone.has-file { border-color: #3fb950; background: #0d1f12; }
+    .drop-icon { font-size: 36px; margin-bottom: 10px; }
+    .drop-label { font-size: 15px; color: #c9d1d9; margin-bottom: 6px; }
+    .drop-label strong { color: #58a6ff; }
+    .drop-sub { font-size: 13px; color: #8b949e; }
+    .file-ok { display: flex; align-items: center; gap: 10px; justify-content: center; }
+    .file-ok .check { color: #3fb950; font-size: 22px; }
+    .file-ok span { color: #c9d1d9; }
+    .file-ok button {
+      background: none;
+      border: none;
+      color: #8b949e;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .text-preview {
+      margin-top: 14px;
+      font-size: 12px;
+      color: #8b949e;
+      background: #0d1117;
+      border-radius: 6px;
+      padding: 10px;
+      line-height: 1.5;
+    }
+    .jd-hint { font-size: 12px; color: #8b949e; margin-top: 10px; }
+
+    /* Analyse button */
+    .analyse-btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #58a6ff, #a371f7);
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: opacity 0.2s;
+      margin-top: 8px;
+    }
+    .analyse-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* Error banner */
+    .error-banner {
+      background: #2d1b1e;
+      border: 1px solid #f85149;
+      color: #f85149;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+
+    /* ── Loading screen ─────────────────────────────────────────────── */
+    .loading-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 80px 20px;
+      gap: 24px;
+    }
+    .loader-ring {
+      width: 64px;
+      height: 64px;
+      border: 4px solid #21262d;
+      border-top-color: #58a6ff;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-msg { color: #8b949e; font-size: 15px; }
+
+    /* ── Results screen ─────────────────────────────────────────────── */
+    .results-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .back-btn {
+      background: none;
+      border: 1px solid #30363d;
+      color: #8b949e;
+      border-radius: 8px;
+      padding: 7px 14px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .back-btn:hover { border-color: #58a6ff; color: #58a6ff; }
+    .results-title { font-size: 22px; font-weight: 700; }
+
+    /* Score hero */
+    .score-hero {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      background: #161b22;
+      border: 1px solid #21262d;
+      border-radius: 14px;
+      padding: 28px;
+      margin-bottom: 20px;
+    }
+    .score-ring-wrap { flex-shrink: 0; }
+    .score-ring {
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .score-inner {
+      width: 82px;
+      height: 82px;
+      background: #0d1117;
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .score-num { font-size: 30px; font-weight: 800; line-height: 1; }
+    .score-denom { font-size: 12px; color: #8b949e; }
+    .score-grade { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+    .score-summary { font-size: 14px; color: #c9d1d9; line-height: 1.6; margin-bottom: 10px; }
+    .candidate-meta { font-size: 13px; color: #8b949e; }
+
+    /* Bar chart */
+    .bar-row { margin-bottom: 14px; }
+    .bar-label-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      margin-bottom: 5px;
+      color: #c9d1d9;
+    }
+    .bar-track { background: #21262d; border-radius: 4px; height: 7px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
+
+    /* Skill tags */
+    .skill-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .skill-tag {
+      font-size: 12px;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-weight: 500;
+    }
+    .skill-found   { background: #0d2116; color: #3fb950; border: 1px solid #1a4025; }
+    .skill-missing { background: #2d1b1e; color: #f85149; border: 1px solid #4d2020; }
+    .skill-neutral { background: #1c2128; color: #c9d1d9; border: 1px solid #30363d; }
+
+    .skills-sub { font-size: 12px; color: #8b949e; margin-bottom: 6px; }
+    .skills-section { margin-bottom: 18px; }
+
+    /* Suggestions */
+    .sug-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .sug-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .sug-critical  { background: #2d1b1e; border: 1px solid #4d2020; }
+    .sug-important { background: #1f1c0d; border: 1px solid #3d3010; }
+    .sug-nice      { background: #0d1f12; border: 1px solid #1a4025; }
+    .sug-badge {
+      flex-shrink: 0;
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 4px;
+      padding: 2px 7px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .sug-badge.critical  { background: #f85149; color: #fff; }
+    .sug-badge.important { background: #d29922; color: #fff; }
+    .sug-badge.nice      { background: #3fb950; color: #000; }
+
+    .card-section-title { font-size: 15px; font-weight: 600; margin-bottom: 14px; }
+
+    /* Reset button at bottom */
+    .reset-btn {
+      display: block;
+      width: 100%;
+      margin-top: 10px;
+      padding: 13px;
+      border: 1px solid #30363d;
+      background: none;
+      color: #8b949e;
+      border-radius: 10px;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    .reset-btn:hover { border-color: #58a6ff; color: #58a6ff; }
+
+    /* ── Utilities ─────────────────────────────────────────────────── */
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<!-- ── Header (always visible) ──────────────────────────────────────────── -->
+<header class="app-header">
+  <div class="logo">
+    <span class="logo-icon">◈</span>
+    <span class="logo-text">ResumeIQ</span>
+  </div>
+  <span class="logo-tag">AI-Powered Resume Analyser</span>
+</header>
+
+<main class="app-main">
+
+  <!-- ── SCREEN 1: Upload ──────────────────────────────────────────────── -->
+  <div id="screen-upload">
+
+    <div class="hero">
+      <h1>Analyse Your Resume</h1>
+      <p>Get an AI-powered score, skill gap analysis, and actionable tips in seconds.</p>
+    </div>
+
+    <div class="steps-row">
+      <div class="step-chip"><span class="step-num">1</span> Upload Resume</div>
+      <div class="step-chip"><span class="step-num">2</span> Add Job Role</div>
+      <div class="step-chip"><span class="step-num">3</span> Get Results</div>
+    </div>
+
+    <!-- Resume input card -->
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">Your Resume</span>
+        <div class="mode-toggle">
+          <button id="btn-paste" class="active" onclick="switchMode('paste')">Paste text</button>
+          <button id="btn-upload" onclick="switchMode('upload')">Upload file</button>
+        </div>
+      </div>
+
+      <!-- Paste mode -->
+      <div id="paste-area">
+        <textarea id="resume-text"
+          placeholder="Paste your full resume here — work experience, skills, education, projects, certifications...">
+        </textarea>
+      </div>
+
+      <!-- Upload mode -->
+      <div id="upload-area" class="hidden">
+        <div id="drop-zone" class="drop-zone"
+          onclick="document.getElementById('file-input').click()"
+          ondragover="handleDragOver(event)"
+          ondragleave="handleDragLeave(event)"
+          ondrop="handleDrop(event)">
+
+          <!-- Default state: prompt to upload -->
+          <div id="drop-default">
+            <div class="drop-icon">📄</div>
+            <div class="drop-label"><strong>Click to upload</strong> or drag &amp; drop</div>
+            <div class="drop-sub">PDF or TXT — max 10 MB</div>
+          </div>
+
+          <!-- Parsing state: show spinner -->
+          <div id="drop-parsing" class="hidden" style="display:flex;align-items:center;gap:10px;justify-content:center;">
+            <div class="loader-ring" style="width:24px;height:24px;border-width:3px;"></div>
+            <span>Extracting text from file...</span>
+          </div>
+
+          <!-- Success state: show filename -->
+          <div id="drop-success" class="file-ok hidden">
+            <span class="check">✓</span>
+            <span id="file-name-display"></span>
+            <button onclick="clearFile(event)">✕</button>
+          </div>
+        </div>
+
+        <input id="file-input" type="file" accept=".pdf,.txt" style="display:none"
+          onchange="handleFileSelect(event)" />
+
+        <!-- Short preview of extracted text so user can verify it worked -->
+        <div id="text-preview" class="text-preview hidden"></div>
+      </div>
+    </div>
+
+    <!-- Job description card -->
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">
+          Job Description
+          <span class="optional-badge">optional</span>
+        </span>
+      </div>
+      <textarea id="job-desc"
+        placeholder="Paste the job description, or just type the role — e.g. 'Senior Data Scientist at a fintech startup'">
+      </textarea>
+      <p class="jd-hint">Adding a job description enables targeted skill matching and role-specific suggestions.</p>
+    </div>
+
+    <!-- Error message (hidden unless there's an error) -->
+    <div id="error-banner" class="error-banner hidden"></div>
+
+    <!-- Main call-to-action button -->
+    <button class="analyse-btn" id="analyse-btn" onclick="runAnalysis()" disabled>
+      <span>Analyse My Resume</span>
+      <span>→</span>
+    </button>
+
+  </div><!-- /screen-upload -->
+
+
+  <!-- ── SCREEN 2: Loading ────────────────────────────────────────────── -->
+  <div id="screen-loading" class="loading-screen hidden">
+    <div class="loader-ring"></div>
+    <p class="loading-msg" id="loading-msg">Reading your resume...</p>
+  </div>
+
+
+  <!-- ── SCREEN 3: Results ─────────────────────────────────────────────── -->
+  <div id="screen-results" class="hidden">
+
+    <div class="results-header">
+      <button class="back-btn" onclick="resetApp()">← Analyse another</button>
+      <h2 class="results-title">Resume Analysis</h2>
+    </div>
+
+    <!-- Score hero card (filled dynamically by JS) -->
+    <div class="score-hero" id="score-hero"></div>
+
+    <!-- Top skills -->
+    <div class="card hidden" id="card-top-skills">
+      <h3 class="card-section-title">Top Skills Identified</h3>
+      <div class="skill-grid" id="top-skills-grid"></div>
+    </div>
+
+    <!-- Score breakdown bars -->
+    <div class="card hidden" id="card-breakdown">
+      <h3 class="card-section-title">Score Breakdown</h3>
+      <div id="breakdown-bars"></div>
+    </div>
+
+    <!-- Skills found vs missing -->
+    <div class="card hidden" id="card-skills-analysis">
+      <h3 class="card-section-title">Skills Analysis</h3>
+      <div id="skills-analysis-content"></div>
+    </div>
+
+    <!-- Improvement suggestions -->
+    <div class="card hidden" id="card-suggestions">
+      <h3 class="card-section-title">Improvement Suggestions</h3>
+      <ul class="sug-list" id="suggestions-list"></ul>
+    </div>
+
+    <button class="reset-btn" onclick="resetApp()">← Analyse Another Resume</button>
+
+  </div><!-- /screen-results -->
+
+</main>
+
+
+<script>
+/*
+  ============================================================================
+  Frontend JavaScript
+  ============================================================================
+  This script handles everything that happens in the browser:
+    - Switching between paste / upload modes
+    - Drag-and-drop file handling
+    - Sending requests to the Flask backend
+    - Cycling loading messages while we wait for Gemini
+    - Rendering the results onto the page
+
+  We use vanilla JS (no React, no Vue) so anyone can read and modify this
+  without needing to know a framework. The logic follows a simple state
+  machine: upload → loading → results.
+*/
+
+// ── State ────────────────────────────────────────────────────────────────────
+
+let resumeText = "";         // Holds the current resume content (pasted or extracted)
+let currentMode = "paste";   // "paste" or "upload"
+let loadingTimer = null;     // Reference to the interval cycling loading messages
+
+
+// ── Loading messages ─────────────────────────────────────────────────────────
+
+const LOADING_MESSAGES = [
+  "Reading your resume...",
+  "Extracting skills & experience...",
+  "Matching against job requirements...",
+  "Generating improvement suggestions...",
+  "Calculating your resume score...",
+];
+
+
+// ── Screen helpers ───────────────────────────────────────────────────────────
+
+/**
+ * Show one screen and hide all others.
+ * We have three screens: upload, loading, results.
+ */
+function showScreen(name) {
+  document.getElementById("screen-upload").classList.add("hidden");
+  document.getElementById("screen-loading").classList.add("hidden");
+  document.getElementById("screen-results").classList.add("hidden");
+  document.getElementById(`screen-${name}`).classList.remove("hidden");
+}
+
+/**
+ * Show or hide the error banner with a given message.
+ * Passing an empty string hides the banner.
+ */
+function setError(msg) {
+  const banner = document.getElementById("error-banner");
+  if (msg) {
+    banner.textContent = msg;
+    banner.classList.remove("hidden");
+  } else {
+    banner.classList.add("hidden");
+  }
+}
+
+
+// ── Mode switching (paste vs upload) ─────────────────────────────────────────
+
+function switchMode(mode) {
+  currentMode = mode;
+
+  // Update button styles
+  document.getElementById("btn-paste").classList.toggle("active", mode === "paste");
+  document.getElementById("btn-upload").classList.toggle("active", mode === "upload");
+
+  // Show/hide the appropriate input area
+  document.getElementById("paste-area").classList.toggle("hidden", mode !== "paste");
+  document.getElementById("upload-area").classList.toggle("hidden", mode !== "upload");
+
+  // Re-evaluate whether the Analyse button should be enabled
+  updateAnalyseButton();
+}
+
+
+// ── Resume text tracking ─────────────────────────────────────────────────────
+
+/**
+ * Called whenever the paste textarea changes — keeps resumeText in sync
+ * and enables/disables the Analyse button accordingly.
+ */
+document.getElementById("resume-text").addEventListener("input", function () {
+  resumeText = this.value.trim();
+  updateAnalyseButton();
+});
+
+function updateAnalyseButton() {
+  document.getElementById("analyse-btn").disabled = resumeText.trim().length < 50;
+}
+
+
+// ── File upload handling ─────────────────────────────────────────────────────
+
+function handleDragOver(event) {
+  event.preventDefault();
+  document.getElementById("drop-zone").classList.add("drag-over");
+}
+
+function handleDragLeave() {
+  document.getElementById("drop-zone").classList.remove("drag-over");
+}
+
+function handleDrop(event) {
+  event.preventDefault();
+  document.getElementById("drop-zone").classList.remove("drag-over");
+  const file = event.dataTransfer.files[0];
+  if (file) processFile(file);
+}
+
+function handleFileSelect(event) {
+  const file = event.target.files[0];
+  if (file) processFile(file);
+}
+
+function clearFile(event) {
+  // Prevent the click from bubbling up to the drop zone's click handler
+  event.stopPropagation();
+  resumeText = "";
+  document.getElementById("file-name-display").textContent = "";
+  document.getElementById("drop-zone").classList.remove("has-file");
+  document.getElementById("drop-default").classList.remove("hidden");
+  document.getElementById("drop-success").classList.add("hidden");
+  document.getElementById("text-preview").classList.add("hidden");
+  document.getElementById("file-input").value = "";
+  updateAnalyseButton();
+}
+
+/**
+ * Send the selected file to Flask's /api/parse-file endpoint.
+ * Flask extracts the text and returns it as JSON.
+ * We store the text in `resumeText` and show a short preview to the user.
+ */
+async function processFile(file) {
+  const allowedTypes = ["application/pdf", "text/plain"];
+  const allowedExtensions = [".pdf", ".txt"];
+  const hasValidExt = allowedExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+
+  if (!allowedTypes.includes(file.type) && !hasValidExt) {
+    setError("Only PDF and TXT files are supported.");
+    return;
+  }
+
+  // Show parsing spinner
+  document.getElementById("drop-default").classList.add("hidden");
+  document.getElementById("drop-success").classList.add("hidden");
+  document.getElementById("drop-parsing").classList.remove("hidden");
+  setError("");
+
+  try {
+    // Build a multipart form request — this is how files are sent over HTTP.
+    const formData = new FormData();
+    formData.append("resume", file);
+
+    const response = await fetch("/api/parse-file", {
+      method: "POST",
+      body: formData   // Note: no Content-Type header — browser sets it automatically for FormData
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Failed to read file.");
+    }
+
+    // Success! Store the extracted text.
+    resumeText = data.text;
+
+    // Update the drop zone to show the filename.
+    document.getElementById("file-name-display").textContent = file.name;
+    document.getElementById("drop-zone").classList.add("has-file");
+    document.getElementById("drop-success").classList.remove("hidden");
+
+    // Show a brief preview so the user can confirm the extraction worked.
+    const preview = document.getElementById("text-preview");
+    preview.innerHTML = `<strong>Preview:</strong> ${resumeText.substring(0, 200)}...`;
+    preview.classList.remove("hidden");
+
+    updateAnalyseButton();
+
+  } catch (err) {
+    setError("Could not read file: " + err.message);
+    document.getElementById("drop-default").classList.remove("hidden");
+  } finally {
+    // Always hide the spinner, regardless of success or failure.
+    document.getElementById("drop-parsing").classList.add("hidden");
+  }
+}
+
+
+// ── Analysis ─────────────────────────────────────────────────────────────────
+
+/**
+ * The main function — sends resume text + job description to Flask,
+ * which forwards it to Gemini and returns a structured JSON analysis.
+ */
+async function runAnalysis() {
+  setError("");
+
+  if (!resumeText || resumeText.trim().length < 50) {
+    setError("Please provide your resume text before analysing.");
+    return;
+  }
+
+  // Switch to loading screen and start cycling through messages.
+  showScreen("loading");
+  let msgIndex = 0;
+  document.getElementById("loading-msg").textContent = LOADING_MESSAGES[0];
+  loadingTimer = setInterval(() => {
+    msgIndex = (msgIndex + 1) % LOADING_MESSAGES.length;
+    document.getElementById("loading-msg").textContent = LOADING_MESSAGES[msgIndex];
+  }, 2200);
+
+  try {
+    const jobDesc = document.getElementById("job-desc").value.trim();
+
+    // POST the resume and job description as JSON to our Flask backend.
+    const response = await fetch("/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ resumeText, jobDesc })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Analysis failed.");
+    }
+
+    // Render results and switch to results screen.
+    renderResults(data);
+    showScreen("results");
+
+  } catch (err) {
+    // If anything goes wrong, go back to the upload screen and show the error.
+    showScreen("upload");
+    setError(err.message || "Something went wrong. Please try again.");
+  } finally {
+    // Always stop the loading message timer.
+    clearInterval(loadingTimer);
+  }
+}
+
+
+// ── Results rendering ─────────────────────────────────────────────────────────
+
+/**
+ * Map a score (0–100) to a colour for the UI.
+ * Green = great, blue = good, yellow = okay, red = needs work.
+ */
+function scoreColour(score) {
+  if (score >= 80) return "#4ade80";
+  if (score >= 65) return "#60a5fa";
+  if (score >= 45) return "#fbbf24";
+  return "#f87171";
+}
+
+/**
+ * Build the conic-gradient CSS for the circular score ring.
+ * This creates the "pie chart" effect where the filled portion
+ * corresponds to the score percentage.
+ */
+function scoreGradient(score) {
+  const colour = scoreColour(score);
+  const bg = score >= 80 ? "#1a2a1a" : score >= 65 ? "#1a1f2a" : score >= 45 ? "#2a2310" : "#2a1515";
+  return `conic-gradient(${colour} 0% ${score}%, ${bg} ${score}% 100%)`;
+}
+
+/**
+ * Take the parsed JSON from Gemini and populate all the result cards.
+ * Each section is only shown if the data actually contains it.
+ */
+function renderResults(r) {
+  const score = Math.round(r.overallScore || 0);
+  const colour = scoreColour(score);
+  const ei = r.extractedInfo || {};
+
+  // ── Score hero card ──────────────────────────────────────────────────────
+  document.getElementById("score-hero").innerHTML = `
+    <div class="score-ring-wrap">
+      <div class="score-ring" style="background: ${scoreGradient(score)}">
+        <div class="score-inner">
+          <span class="score-num" style="color: ${colour}">${score}</span>
+          <span class="score-denom">/100</span>
+        </div>
+      </div>
+    </div>
+    <div class="score-info">
+      <div class="score-grade" style="color: ${colour}">${r.grade || ""}</div>
+      <p class="score-summary">${r.summary || ""}</p>
+      ${ei.name && ei.name !== "Unknown" ? `
+        <div class="candidate-meta">
+          <strong>${ei.name}</strong>
+          ${ei.currentRole ? ` · ${ei.currentRole}` : ""}
+          ${ei.yearsExperience ? ` · ${ei.yearsExperience}` : ""}
+        </div>` : ""}
+    </div>
+  `;
+
+  // ── Top skills ───────────────────────────────────────────────────────────
+  if (ei.topSkills && ei.topSkills.length > 0) {
+    document.getElementById("top-skills-grid").innerHTML =
+      ei.topSkills.map(s => `<span class="skill-tag skill-neutral">${s}</span>`).join("");
+    document.getElementById("card-top-skills").classList.remove("hidden");
+  }
+
+  // ── Score breakdown bars ─────────────────────────────────────────────────
+  if (r.breakdown) {
+    const labels = {
+      skillsMatch: "Skills Match",
+      experienceDepth: "Experience Depth",
+      keywordsOptimization: "Keywords Optimisation",
+      formatting: "Formatting",
+      atsCompatibility: "ATS Compatibility",
+    };
+
+    document.getElementById("breakdown-bars").innerHTML =
+      Object.entries(r.breakdown).map(([key, val]) => {
+        const v = Math.round(val);
+        const c = scoreColour(v);
+        return `
+          <div class="bar-row">
+            <div class="bar-label-row">
+              <span class="bar-label">${labels[key] || key}</span>
+              <span style="color:${c};font-size:13px;">${v}/100</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill" style="width:${v}%;background:${c}"></div>
+            </div>
+          </div>`;
+      }).join("");
+
+    document.getElementById("card-breakdown").classList.remove("hidden");
+  }
+
+  // ── Skills analysis (found vs missing) ──────────────────────────────────
+  if ((r.skillsFound && r.skillsFound.length > 0) || (r.skillsMissing && r.skillsMissing.length > 0)) {
+    let html = "";
+    if (r.skillsFound && r.skillsFound.length > 0) {
+      html += `
+        <div class="skills-section">
+          <p class="skills-sub">Found in your resume</p>
+          <div class="skill-grid">
+            ${r.skillsFound.map(s => `<span class="skill-tag skill-found">${s}</span>`).join("")}
+          </div>
+        </div>`;
+    }
+    if (r.skillsMissing && r.skillsMissing.length > 0) {
+      html += `
+        <div class="skills-section">
+          <p class="skills-sub">Missing / Recommended</p>
+          <div class="skill-grid">
+            ${r.skillsMissing.map(s => `<span class="skill-tag skill-missing">${s}</span>`).join("")}
+          </div>
+        </div>`;
+    }
+    document.getElementById("skills-analysis-content").innerHTML = html;
+    document.getElementById("card-skills-analysis").classList.remove("hidden");
+  }
+
+  // ── Improvement suggestions ──────────────────────────────────────────────
+  if (r.suggestions && r.suggestions.length > 0) {
+    document.getElementById("suggestions-list").innerHTML =
+      r.suggestions.map(s => {
+        const cls = s.priority === "critical" ? "sug-critical"
+                  : s.priority === "important" ? "sug-important"
+                  : "sug-nice";
+        return `
+          <li class="sug-item ${cls}">
+            <span class="sug-badge ${s.priority}">${s.priority}</span>
+            <span>${s.text}</span>
+          </li>`;
+      }).join("");
+
+    document.getElementById("card-suggestions").classList.remove("hidden");
+  }
+}
+
+
+// ── Reset ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Clear all state and go back to the upload screen.
+ * Called when the user clicks "Analyse another".
+ */
+function resetApp() {
+  resumeText = "";
+
+  // Hide all result cards (they'll be re-populated next time)
+  ["card-top-skills", "card-breakdown", "card-skills-analysis", "card-suggestions"]
+    .forEach(id => document.getElementById(id).classList.add("hidden"));
+
+  // Clear textarea
+  document.getElementById("resume-text").value = "";
+
+  // Reset the drop zone
+  clearFile({ stopPropagation: () => {} });
+
+  // Go back to paste mode by default
+  switchMode("paste");
+
+  updateAnalyseButton();
+  setError("");
+  showScreen("upload");
+}
+
+</script>
+</body>
+</html>
