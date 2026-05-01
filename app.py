@@ -338,4 +338,4 @@ if __name__ == "__main__":
     #   - Auto-reload when you save a file (huge during development)
     #   - Detailed error pages in the browser
     # Never use debug=True in production!
-    app.run(debug=True, port=port)
+    app.run(host="0.0.0.0", port=port)
